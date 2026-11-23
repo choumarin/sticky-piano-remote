@@ -1,0 +1,11 @@
+// Copy to src/config_local.h (git-ignored) to set per-setup options.
+#pragma once
+
+// Your WIDI's Bluetooth address (see `tools/widi_voice.py scan` or
+// `bluetoothctl devices`). Optional: without it the Sticky connects to the
+// first BLE-MIDI device it finds. Recommended for WIDIs that sometimes
+// advertise an all-zero address.
+// #define WIDI_ADDRESS "aa:bb:cc:dd:ee:ff"
+
+// MIDI channel of the piano's voice part (1-16). The YUS3 SH-TA uses 1.
+// #define MIDI_CHANNEL 1

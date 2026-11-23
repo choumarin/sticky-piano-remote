@@ -1,0 +1,9 @@
+{
+  "name": "SDPowerControl",
+  "version": "1.0.0",
+  "description": "SD card power gating (extracted from papyrix-reader SDCardManager, MIT).",
+  "build": {
+    "srcDir": "src",
+    "includeDir": "include"
+  }
+}
