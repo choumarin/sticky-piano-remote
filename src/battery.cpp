@@ -20,6 +20,9 @@ bool ok = false;
 int soc = 0, avgCurrent = 0, timeToEmptyMin = 0;
 char lastText[48] = "";
 
+// BQ25616 STAT pin: low while charging, high when complete/disabled/unplugged.
+bool statCharging() { return digitalRead(cfg::kPinChargeState) == LOW; }
+
 bool read16(uint8_t reg, uint16_t& v) {
   Wire1.beginTransmission(kAddr);
   Wire1.write(reg);
@@ -34,6 +37,7 @@ namespace battery {
 
 void begin() {
   Wire1.begin(cfg::kPinGaugeSda, cfg::kPinGaugeScl, 100000);
+  pinMode(cfg::kPinChargeState, INPUT);  // external 1.2k pull-up on STAT
   update();
 }
 
@@ -46,6 +50,13 @@ bool update() {
     avgCurrent = (int16_t)avg;
     timeToEmptyMin = tte;
   }
+  // Edge-triggered log: shows STAT vs the gauge's current sign while charging.
+  static int lastStat = -1;
+  const int stat = digitalRead(cfg::kPinChargeState);
+  if (stat != lastStat) {
+    lastStat = stat;
+    Serial.printf("charge: STAT=%d gauge=%+dmA %d%%\n", stat, ok ? avgCurrent : 0, soc);
+  }
   char text[sizeof(lastText)];
   statusText(text, sizeof(text));
   if (strcmp(text, lastText) == 0) return false;
@@ -54,6 +65,8 @@ bool update() {
 }
 
 int percent() { return ok ? soc : -1; }
+
+bool charging() { return statCharging(); }
 
 void statusText(char* buf, size_t n) {
   if (!ok) {

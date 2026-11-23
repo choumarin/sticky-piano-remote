@@ -15,6 +15,20 @@ USB is a CH343 UART (shows up as `/dev/ttyACM0` on Linux).
 | Up / Down buttons (unused) | 5 / 6 |
 | Power latch (drive HIGH) | 45 |
 
+## Charger (BQ25616) pins — from the official schematic, rev 01 (2026-06)
+
+- USB VBUS feeds only the charger and the CH343 UART — **no VBUS GPIO**. The
+  charger's power-good output (VSYS_PG) is a test point (TP5) only, not routed
+  to the ESP32. Hence "no USB detection pin": plugging in can't wake the board.
+- But the charger's **STAT output is on GPIO40** (`CHARGE_STATE`): open-drain,
+  pulled up 1.2k — LOW while charging, HIGH when complete or disabled. Not an
+  RTC GPIO, so it can't wake from deep sleep, but the battery checks could read
+  it instead of the gauge. Verified on hardware: STAT=0 while charging at 94%.
+- The charger enable (`EN_BAT_CHGn`, active low) is on GPIO39 — the same pin
+  papyrix's profile calls `chargeEnablePin`. papyrix only drives it during
+  deep-sleep prep, so `power::earlyInit()` now drives it LOW at every boot;
+  before that, the battery charged only while the device was off.
+
 ## Display (SSD1677)
 
 - The panel controller is an **SSD1677**. papyrix-reader's probe can also report
@@ -68,6 +82,11 @@ Shorter timings leave the chip ACKing I²C without reporting touches. I²C runs 
   - Battery % and time are kept in RTC memory, and the status line reports the
     drain after wake ("Was off 14h05, used 2% battery").
   - Sleep current has not been measured yet; those wake-up reports will give it.
+- While off, a timer also wakes it for **battery checks** (2 min while
+  charging, 1 h otherwise): read the gauge, redraw the off screen if the
+  charge % changed, sleep again. Each check is a reboot with no BLE or touch;
+  the e-ink keeps its picture between checks. There is no USB-detect pin, so
+  plugging the charger in is only noticed at the next check.
 - Waking means a reboot and a BLE reconnect, ~4 s in total.
 - Keeping the connection while lightly sleeping would need ESP-IDF power
   management (Arduino's prebuilt core doesn't support it well).

@@ -323,7 +323,7 @@ void mainTap(int16_t x, int16_t y) {
 
 namespace ui {
 
-bool begin() {
+bool begin(bool baseline) {
   papyrix::board::selectPanel(papyrix::board::HardwareIdentity::instance());
   const auto init = display.begin();
   if (init != Panel::InitResult::Ok) {
@@ -331,8 +331,10 @@ bool begin() {
     return false;
   }
   fb = display.getFrameBuffer();  // only valid after begin()
-  drawMain();
-  display.displayBuffer(Panel::FULL_REFRESH);  // clean baseline
+  if (baseline) {
+    drawMain();
+    display.displayBuffer(Panel::FULL_REFRESH);  // clean baseline
+  }
   papyrix::hal::stickyFastTemp = 0x19;          // fixed 25 C enables the keep-powered path
   papyrix::hal::stickyKeepPowered = true;
   return true;
@@ -391,7 +393,7 @@ void showNotice(const char* text, uint32_t forMs) {
   if (screen == Screen::Main) drawBar(), requestRefresh();
 }
 
-void showOffScreen(bool idle) {
+void showOffScreen(bool idle, int percent) {
   gfx.fillRect(0, 0, 800, 480, kWhite);
   drawText((800 - 3 * 36) / 2, 170, 6, "Off");
   const char* hint = "Press the power button to turn on";
@@ -399,6 +401,16 @@ void showOffScreen(bool idle) {
   if (idle) {
     const char* why = "(turned off after 10 minutes without use)";
     drawText((800 - (int16_t)strlen(why) * 12) / 2, 300, 2, why);
+  }
+  if (percent >= 0) {
+    constexpr int16_t kW = 320, kH = 28;
+    const int16_t x = (800 - kW) / 2, y = idle ? 344 : 324;
+    gfx.drawRoundRect(x, y, kW, kH, 8, kBlack);
+    gfx.drawRoundRect(x + 1, y + 1, kW - 2, kH - 2, 7, kBlack);
+    gfx.fillRect(x + 5, y + 5, (kW - 10) * percent / 100, kH - 10, kBlack);
+    char label[24];
+    snprintf(label, sizeof(label), "Battery %d%%", percent);
+    drawText((800 - (int16_t)strlen(label) * 12) / 2, y + kH + 14, 2, label);
   }
   display.displayBuffer(Panel::FULL_REFRESH, true);
   display.deepSleep();

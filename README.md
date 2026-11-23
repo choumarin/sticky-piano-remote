@@ -22,6 +22,9 @@ to a **CME WIDI Master** plugged into the piano's MIDI IN/OUT.
   connect (it's remembered), disconnect. It reconnects automatically.
 - **Power:** hold the power button 1.5 s to turn off: the screen shows "Off"
   and the Sticky goes into deep sleep. Press the power button to turn it back on.
+- **Battery while off:** the off screen shows a battery bar with the charge %
+  and refreshes as it changes. Plugging the charger in while off is noticed
+  too, within about an hour.
 - **Auto-off:** after **10 minutes without use** it turns itself off.
   - Taps, button presses and anything played on the piano (keys, pedals, panel
     voice changes) count as use.

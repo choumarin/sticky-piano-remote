@@ -67,6 +67,8 @@ inline constexpr char kDefaultTargetAddr[] = WIDI_ADDRESS;
 // ---- Pins (Seeed reTerminal Sticky) --------------------------------------
 inline constexpr int kPinPowerButton = 4;   // active low; deep-sleep wake source
 inline constexpr int kPinPowerLatch = 45;   // keep HIGH
+inline constexpr int kPinChargerEnable = 39;  // BQ25616 CE, active low: drive LOW to charge
+inline constexpr int kPinChargeState = 40;    // BQ25616 STAT: LOW while charging
 inline constexpr int kPinTouchEn = 42, kPinTouchRst = 41, kPinTouchInt = 21;
 inline constexpr int kPinTouchSda = 3, kPinTouchScl = 2;
 inline constexpr int kPinGaugeSda = 1, kPinGaugeScl = 0;  // BQ27220 fuel gauge
