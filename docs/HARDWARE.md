@@ -68,9 +68,20 @@ Shorter timings leave the chip ACKing I²C without reporting touches. I²C runs 
 
 ## Power
 
-- Measured: about 70 mA always on, which gives ~11 h on the 750 mAh cell.
+- Measured with the gauge timeline: about **60 mA** awake, connected and idle
+  (rock steady across 20 minutes; the trace also shows metronome running
+  adds ~3 mA, and the gauge's charging readings match the plug state).
+  That's the ESP32-S3 staying awake: panel drive, touch, Bluetooth toggle
+  and an 80 MHz CPU each moved this by less than the measurement noise in
+  bench tests, so ~12.5 h runtime on the 750 mAh cell is the current
+  ceiling. The next lever would be FreeRTOS light sleep between events,
+  which the prebuilt Arduino core doesn't support well.
   - Turning off the panel drive, touch, Bluetooth or dropping the CPU to 80 MHz
     each changed this by less than the measurement noise.
+  - Bluetooth connection-interval stretching while idle was also tried and
+    reverted: the WIDI wouldn't take (or took seconds to honor) a fast
+    update when the metronome started, and clicks quantized to the slow
+    connection events — ±0.5 s jitter. See the TODO in `src/ble_midi.cpp`.
   - The remaining draw is the ESP32-S3 staying awake.
 - The **BQ27220 reports current and capacity ~10× too high** (7500 mAh for the
   750 mAh cell). The ratio is right, so charge % and time-to-empty are usable,
