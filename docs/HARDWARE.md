@@ -93,9 +93,9 @@ Shorter timings leave the chip ACKing I²C without reporting touches. I²C runs 
   - Battery % and time are kept in RTC memory, and the status line reports the
     drain after wake ("Was off 14h05, used 2% battery").
   - Sleep draw, measured with the gauge-sample timeline (see below): about
-  **0.4–0.5 mA** after the reset-pin fix below — ESP32 RTC domain,
-  buck-boost, fuel gauge and sensors — under 2% of the battery per day.
-  Before the fix it was ~14 mA (36% overnight).
+    **0.4–0.5 mA** after the reset-pin fix below — ESP32 RTC domain,
+    buck-boost, fuel gauge and sensors — under 2% of the battery per day.
+    Before the fix it was ~14 mA (36% overnight).
 - While off, a timer also wakes it for **battery checks** (2 min while
   charging, 1 h otherwise): read the gauge, redraw the off screen if the
   charge % changed, sleep again. Each check is a reboot with no BLE or
