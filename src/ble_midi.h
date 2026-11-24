@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "metronome.h"
+
 namespace ble {
 
 enum class State : uint8_t { Off, Idle, Connecting, Connected, Scanning };

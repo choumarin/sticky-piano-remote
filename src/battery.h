@@ -17,6 +17,12 @@ bool charging();  // charger STAT pin says a charge is in progress (the gauge
 void noteCheckSample();
 void printCheckSamples();
 
+// Runtime samples (device on): gauge current every ~15 s, tagged 0 =
+// connected-idle (slow conn), 1 = active (fast conn / metronome),
+// 2 = not connected. Ring spans ~24 min.
+void noteRuntimeSample(int tag);
+void printRuntimeSamples();
+
 void statusText(char* buf, size_t n);  // e.g. "Battery 66%  ~10h40 left" / "... charging"
 
 }  // namespace battery

@@ -1,6 +1,7 @@
 #include "metronome.h"
 
 #include <Arduino.h>
+#include <Preferences.h>
 
 #include "ble_midi.h"
 #include "config.h"
@@ -46,13 +47,39 @@ void metronomeTask(void*) {
 
 namespace metronome {
 
-void begin() { xTaskCreate(metronomeTask, "metronome", 4096, nullptr, 5, nullptr); }
+void begin() {
+  // Remember tempo and beats-per-bar across power off/on (running state does
+  // not survive — a fresh boot starts stopped).
+  Preferences prefs;
+  prefs.begin("sticky", true);
+  tempo = constrain((int)prefs.getUShort("bpm", cfg::kDefaultBpm), cfg::kMinBpm, cfg::kMaxBpm);
+  const int beats = prefs.getUChar(
+      "beats", kBeatOptions[beatIdx]);  // click or one of 4/3/2/6
+  for (int i = 0; i < (int)sizeof(kBeatOptions); i++)
+    if (kBeatOptions[i] == beats) beatIdx = i;
+  prefs.end();
+  xTaskCreate(metronomeTask, "metronome", 4096, nullptr, 5, nullptr);
+}
 
 bool running() { return on; }
 void setRunning(bool r) { on = r; }
 int bpm() { return tempo; }
-void setBpm(int b) { tempo = constrain(b, cfg::kMinBpm, cfg::kMaxBpm); }
+void setBpm(int b) {
+  const int v = constrain(b, cfg::kMinBpm, cfg::kMaxBpm);
+  if (v == tempo) return;
+  tempo = v;
+  Preferences prefs;
+  prefs.begin("sticky", false);
+  prefs.putUShort("bpm", (uint16_t)v);
+  prefs.end();
+}
 uint8_t beatsPerBar() { return kBeatOptions[beatIdx]; }
-void cycleBeatsPerBar() { beatIdx = (beatIdx + 1) % sizeof(kBeatOptions); }
+void cycleBeatsPerBar() {
+  beatIdx = (beatIdx + 1) % sizeof(kBeatOptions);
+  Preferences prefs;
+  prefs.begin("sticky", false);
+  prefs.putUChar("beats", kBeatOptions[beatIdx]);
+  prefs.end();
+}
 
 }  // namespace metronome

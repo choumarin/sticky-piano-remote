@@ -68,7 +68,8 @@ void setup() {
   power::begin();
 
   char report[64];
-  battery::printCheckSamples();  // drain timeline (silent when empty)
+  battery::printCheckSamples();   // drain timeline (silent when empty)
+  battery::printRuntimeSamples(); // runtime current vs conn state
   if (power::offGlitchBoots())
     Serial.printf("WARNING: %u glitch reboot(s) during the last off period\n",
                   power::offGlitchBoots());
@@ -86,5 +87,15 @@ void loop() {
   }
   if (power::offRequested()) powerOff(false);
   if (power::idleMs() > cfg::kIdleOffMs) powerOff(true);
+  // Runtime drain forensics: gauge current every 15 s, tagged with how busy
+  // the BLE link is (the /10-scaled gauge avg is steady enough to A/B this).
+  static uint32_t lastRuntimeMs = 0;
+  if (millis() - lastRuntimeMs > 15000) {
+    lastRuntimeMs = millis();
+    battery::update();
+    battery::noteRuntimeSample(metronome::running() ? 1
+                               : ble::connected()   ? 0
+                                                    : 2);
+  }
   ui::tick();
 }

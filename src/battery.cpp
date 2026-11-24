@@ -78,6 +78,38 @@ void printCheckSamples() {
                 last.pct);
 }
 
+// Runtime (device on): gauge rolling current with a conn-state tag; the
+// gauge's ~60 s window smooths the sample nicely.
+constexpr int kMaxRuntime = 96;
+struct RuntimeSample {
+  uint32_t at;
+  int16_t avg;
+  int8_t tag;
+};
+RTC_DATA_ATTR RuntimeSample runtime[kMaxRuntime];
+RTC_DATA_ATTR uint8_t runtimeCount = 0, runtimeNext = 0;
+
+void noteRuntimeSample(int tag) {
+  if (!ok) return;
+  timeval tv;
+  gettimeofday(&tv, nullptr);
+  runtime[runtimeNext] = {(uint32_t)tv.tv_sec, (int16_t)avgCurrent, (int8_t)tag};
+  runtimeNext = (uint8_t)((runtimeNext + 1) % kMaxRuntime);
+  if (runtimeCount < kMaxRuntime) runtimeCount++;
+}
+
+void printRuntimeSamples() {
+  if (!runtimeCount) return;
+  Serial.printf("runtime gauge current (mA ~10x; tag 0=idle 1=active 2=no BLE):\n");
+  for (int i = 0; i < runtimeCount; i++) {
+    const RuntimeSample& s = runtime[(runtimeNext + kMaxRuntime - runtimeCount + i) % kMaxRuntime];
+    Serial.printf("  t=%lu tag=%d %+dmA\n", (unsigned long)s.at, s.tag, s.avg);
+  }
+  const RuntimeSample& first = runtime[(runtimeNext + kMaxRuntime - runtimeCount) % kMaxRuntime];
+  const RuntimeSample& last = runtime[(runtimeNext + kMaxRuntime - 1) % kMaxRuntime];
+  Serial.printf("  span %lus\n", (unsigned long)(last.at - first.at));
+}
+
 void begin() {
   Wire1.begin(cfg::kPinGaugeSda, cfg::kPinGaugeScl, 100000);
   pinMode(cfg::kPinChargeState, INPUT);  // external 1.2k pull-up on STAT

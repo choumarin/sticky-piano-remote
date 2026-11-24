@@ -18,6 +18,8 @@ to a **CME WIDI Master** plugged into the piano's MIDI IN/OUT.
 - **Metronome:** plays the piano's own metronome click/bell sounds over MIDI.
   - Tempo from 5 to 500 bpm, with −5/−1/+1/+5 buttons, or tap the bpm number for a keypad.
   - Beats per bar: click only (default), 4, 3, 2 or 6, with a bell on beat 1.
+  - Tempo and beats-per-bar are remembered across power off/on; it always
+    starts stopped.
 - **Bluetooth screen** (BT button): Bluetooth on/off, scan, tap a device to
   connect (it's remembered), disconnect. It reconnects automatically.
 - **Power:** hold the power button 1.5 s to turn off: the screen shows "Off"

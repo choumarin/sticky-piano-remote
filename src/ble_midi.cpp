@@ -33,6 +33,18 @@ volatile bool autoConnect = true;
 volatile bool reqScan = false, reqDisconnect = false, reqConnect = false;
 volatile int reqConnectIdx = -1;
 
+// ---- Connection speed ------------------------------------------------------
+// The radio's cost is dominated by how often we wake for a connection event.
+// Stretching it to 250-500 ms while idle broke the metronome: the WIDI won't
+// take a fast-interval update (or takes seconds to honor it), and clicks
+// quantize to connection events on a 500 ms grid = ±0.5 s jitter. So the
+// stretch is disabled (planned: measure the negotiated interval first, then
+// only stretch while nothing is playing, with a floor the WIDI accepts).
+// See the runtime sample ring in battery.cpp for the measured reality.
+void updateConnSpeed() {
+  // disabled for now — see note above
+}
+
 void setState(ble::State s) {
   if (st != s) {
     st = s;
@@ -258,6 +270,7 @@ void bleTask(void*) {
       reqScan = false;
       scan();
     }
+    if (linkUp) updateConnSpeed();
     if (!linkUp && autoConnect && millis() - lastTryMs > (targetAddr[0] ? 3000u : 10000u)) {
       lastTryMs = millis();
       if (targetAddr[0]) {
