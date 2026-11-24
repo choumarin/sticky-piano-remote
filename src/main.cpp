@@ -35,7 +35,9 @@ static void chargeCheck() {
   // in deepSleep() — it should turn the device on.
   if (digitalRead(cfg::kPinPowerButton) == LOW) return;
   battery::begin();
-  battery::update();
+  const bool gaugeOk = battery::update();
+  battery::noteCheckSample();
+  if (!gaugeOk) Serial.println("battery check: GAUGE READ FAILED");
   const int pct = battery::percent();
   Serial.printf("battery check: %d%%, %s\n", pct, battery::charging() ? "charging" : "idle");
   int shown = power::shownPercent();
@@ -66,6 +68,10 @@ void setup() {
   power::begin();
 
   char report[64];
+  battery::printCheckSamples();  // drain timeline (silent when empty)
+  if (power::offGlitchBoots())
+    Serial.printf("WARNING: %u glitch reboot(s) during the last off period\n",
+                  power::offGlitchBoots());
   if (power::wakeReport(battery::percent(), report, sizeof(report))) {
     Serial.println(report);
     ui::showNotice(report, 60000);

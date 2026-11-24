@@ -29,6 +29,9 @@ bool chargeCheckWake();
 int shownPercent();
 bool shownCharging();
 bool shownIdle();
+// Reboots that happened while an off period was running (neither a battery
+// check nor a button press) — the prime overnight-drain suspect.
+uint32_t offGlitchBoots();
 
 // After waking from deep sleep: e.g. "Was off 14h05, used 2% battery".
 // Returns false on a normal (cold) boot.

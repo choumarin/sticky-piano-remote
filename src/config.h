@@ -47,6 +47,17 @@ inline constexpr uint8_t kNoteClick = 21;
 inline constexpr uint8_t kNoteBell = 22;
 inline constexpr int kMinBpm = 5, kMaxBpm = 500, kDefaultBpm = 80;  // piano's own range
 
+// ---- Off-screen battery checks -------------------------------------------
+// Timer wake cadence while off: snappy while charging, slow otherwise (the
+// sleep baseline dwarfs the checks). Override for bench diagnostics, e.g.
+// #define BATTERY_CHECK_IDLE_SEC 120 to get a current trace in half an hour.
+#ifndef BATTERY_CHECK_IDLE_SEC
+#define BATTERY_CHECK_IDLE_SEC (60 * 60)
+#endif
+#ifndef BATTERY_CHECK_CHARGING_SEC
+#define BATTERY_CHECK_CHARGING_SEC (2 * 60)
+#endif
+
 // ---- Power ------------------------------------------------------------------
 // Turn off after this long without a tap, a button press or anything played on
 // the piano. A running metronome or a live BLE connection doesn't count.

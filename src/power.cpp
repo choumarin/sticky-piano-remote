@@ -23,6 +23,11 @@ RTC_DATA_ATTR SleepRecord sleepRecord;
 constexpr uint32_t kMagic = 0x51EE9u;
 bool wokeFromSleep = false;
 
+// Reboots while off that were neither a battery check nor a button press —
+// i.e. the firmware reset itself and ran wide awake until the auto-off. Prime
+// suspect for overnight drain. RTC counter, cleared when power stays off.
+RTC_DATA_ATTR uint32_t glitchBoots = 0;
+
 // What the off screen shows (charge %, -1 = plain "Off", whether the charger
 // is in, whether it auto-offed), and how often the timer wakes us to refresh
 // it: often while charging, rarely otherwise (the battery drains very slowly
@@ -35,8 +40,8 @@ struct OffDisplay {
   bool idle;
 };
 RTC_DATA_ATTR OffDisplay offDisplay = {-1, false, false};
-constexpr uint64_t kChargeCheckUsCharging = 2ULL * 60 * 1000000;
-constexpr uint64_t kChargeCheckUsIdle = 60ULL * 60 * 1000000;
+constexpr uint64_t kChargeCheckUsCharging = (uint64_t)BATTERY_CHECK_CHARGING_SEC * 1000000;
+constexpr uint64_t kChargeCheckUsIdle = (uint64_t)BATTERY_CHECK_IDLE_SEC * 1000000;
 
 time_t nowSeconds() {
   timeval tv;
@@ -81,9 +86,14 @@ void earlyInit() {
   gpio_hold_dis((gpio_num_t)cfg::kPinChargerEnable);
   pinMode(cfg::kPinChargerEnable, OUTPUT);
   digitalWrite(cfg::kPinChargerEnable, LOW);
+  gpio_hold_dis((gpio_num_t)17);  // display reset, held LOW while asleep
   rtc_gpio_deinit((gpio_num_t)cfg::kPinPowerButton);  // was an RTC wake pin while asleep
   pinMode(cfg::kPinPowerButton, INPUT_PULLUP);
-  wokeFromSleep = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1 && sleepRecord.magic == kMagic;
+  const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+  const bool fromSleep = cause == ESP_SLEEP_WAKEUP_EXT1 && sleepRecord.magic == kMagic;
+  if (sleepRecord.magic == kMagic && !fromSleep && cause != ESP_SLEEP_WAKEUP_TIMER)
+    glitchBoots++;  // a reset while an off period was running
+  wokeFromSleep = fromSleep;
   lastActivityMs = millis();
 }
 
@@ -102,6 +112,8 @@ bool shownCharging() { return offDisplay.charging; }
 
 bool shownIdle() { return offDisplay.idle; }
 
+uint32_t offGlitchBoots() { return glitchBoots; }
+
 bool wakeReport(int batteryPercent, char* buf, size_t n) {
   if (!wokeFromSleep) return false;
   wokeFromSleep = false;
@@ -116,9 +128,10 @@ bool wakeReport(int batteryPercent, char* buf, size_t n) {
 }
 
 void deepSleep(int batteryPercent, int shownPercent, bool shownCharging, bool shownIdle) {
-  // A charging check keeps the original record, so the wake report still
+  // A battery check keeps the original record, so the wake report still
   // covers the whole time the device was off.
-  if (!chargeCheckWake()) sleepRecord = {kMagic, batteryPercent, nowSeconds()};
+  sleepRecord = {kMagic, batteryPercent, nowSeconds()};
+  glitchBoots = 0;
   offDisplay = {shownPercent, shownCharging, shownIdle};
   while (digitalRead(cfg::kPinPowerButton) == LOW) delay(10);  // else we'd wake at once
   delay(50);
@@ -132,6 +145,16 @@ void deepSleep(int batteryPercent, int shownPercent, bool shownCharging, bool sh
   // charging (the % moves fast), rarely otherwise.
   esp_sleep_enable_timer_wakeup(shownCharging ? kChargeCheckUsCharging
                                               : kChargeCheckUsIdle);
+  // papyrix holds the display reset HIGH while the panel rail is off; the
+  // 3.3 V back-feeds the unpowered SSD1677 through its input protection and
+  // costs ~14 mA of pure standby drain (measured -137 -> -5 gauge units).
+  // Hold it LOW instead: the chip is unpowered, low reset is its natural
+  // idle. (Seeed's own firmware avoids the same trap by keeping EPD_EN on;
+  // see docs/HARDWARE.md.)
+  gpio_hold_dis((gpio_num_t)17);
+  pinMode(17, OUTPUT);
+  digitalWrite(17, LOW);
+  gpio_hold_en((gpio_num_t)17);
   gpio_hold_en((gpio_num_t)cfg::kPinPowerLatch);
   gpio_deep_sleep_hold_en();
   esp_deep_sleep_start();

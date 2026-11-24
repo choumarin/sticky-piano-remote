@@ -81,12 +81,27 @@ Shorter timings leave the chip ACKing I²C without reporting touches. I²C runs 
   - Holds GPIO45 high and wakes on GPIO4 low (ext1).
   - Battery % and time are kept in RTC memory, and the status line reports the
     drain after wake ("Was off 14h05, used 2% battery").
-  - Sleep current has not been measured yet; those wake-up reports will give it.
+  - Sleep draw, measured with the gauge-sample timeline (see below): about
+  **0.4–0.5 mA** after the reset-pin fix below — ESP32 RTC domain,
+  buck-boost, fuel gauge and sensors — under 2% of the battery per day.
+  Before the fix it was ~14 mA (36% overnight).
 - While off, a timer also wakes it for **battery checks** (2 min while
   charging, 1 h otherwise): read the gauge, redraw the off screen if the
-  charge % changed, sleep again. Each check is a reboot with no BLE or touch;
-  the e-ink keeps its picture between checks. There is no USB-detect pin, so
-  plugging the charger in is only noticed at the next check.
+  charge % changed, sleep again. Each check is a reboot with no BLE or
+  touch; the e-ink keeps its picture between checks. There is no USB-detect
+  pin, so plugging the charger in is only noticed at the next check.
+- **Back-feed bug (found by pad bisection):** papyrix's sleep prep holds the
+  display reset line (GPIO17) **HIGH** while cutting the panel rail. The
+  3.3 V back-feeds the unpowered SSD1677 through its input protection and
+  burns ~13.7 mA all night. Our `power::deepSleep()` overrides it to LOW
+  (the chip is unpowered; low reset is its natural idle). Seeed's own
+  firmware avoids the same trap by keeping `EPD_EN` on while the controller
+  sleeps.
+- Drain forensics: every battery check samples the gauge into an RTC ring;
+  each boot prints the off-period timeline (time, charge %, avg current) on
+  serial, plus reboot-during-sleep (`glitchBoots`) counting. The check
+  cadence is configurable via `BATTERY_CHECK_IDLE_SEC` /
+  `BATTERY_CHECK_CHARGING_SEC` in `src/config.h`.
 - Waking means a reboot and a BLE reconnect, ~4 s in total.
 - Keeping the connection while lightly sleeping would need ESP-IDF power
   management (Arduino's prebuilt core doesn't support it well).

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include <sys/time.h>
 
 #include "config.h"
 
@@ -34,6 +35,48 @@ bool read16(uint8_t reg, uint16_t& v) {
 }  // namespace
 
 namespace battery {
+
+// Off-period drain samples (survive deep sleep): one per timer check. The
+// gauge's avg current is a rolling ~60 s average, so at a 1 s check it mostly
+// measures the sleep before it — and the timestamps expose any hours where
+// the device was NOT asleep (no samples). Not cleared at power-off: a rolling
+// window, so the data survives even if the device auto-offs before it's read.
+constexpr int kMaxSamples = 24;
+struct OffSample {
+  uint32_t at;  // epoch seconds
+  int16_t pct;
+  int16_t avg;  // gauge avg current, ~10x inflated
+};
+RTC_DATA_ATTR OffSample samples[kMaxSamples];
+RTC_DATA_ATTR uint8_t sampleCount = 0, sampleNext = 0;
+
+void noteCheckSample() {
+  // Record even failed reads: the point is to know the check ran at all.
+  timeval tv;
+  gettimeofday(&tv, nullptr);
+  samples[sampleNext] = {(uint32_t)tv.tv_sec, (int16_t)(ok ? soc : -1),
+                         (int16_t)(ok ? avgCurrent : 0)};
+  sampleNext = (uint8_t)((sampleNext + 1) % kMaxSamples);
+  if (sampleCount < kMaxSamples) sampleCount++;
+}
+
+void printCheckSamples() {
+  if (!sampleCount) return;
+  Serial.printf("off period, oldest to newest (-1%% = gauge read failed; mA ~10x):\n");
+  for (int i = 0; i < sampleCount; i++) {
+    const OffSample& s = samples[(sampleNext + kMaxSamples - sampleCount + i) % kMaxSamples];
+    Serial.printf("  t=%lu (+%lus) %d%% %+dmA\n", (unsigned long)s.at,
+                  (unsigned long)(i ? s.at - samples[(sampleNext + kMaxSamples - sampleCount + i - 1) %
+                                                                     kMaxSamples]
+                                                       .at
+                                    : 0),
+                  s.pct, s.avg);
+  }
+  const OffSample& first = samples[(sampleNext + kMaxSamples - sampleCount) % kMaxSamples];
+  const OffSample& last = samples[(sampleNext + kMaxSamples - 1) % kMaxSamples];
+  Serial.printf("  span %lus, %d%% -> %d%%\n", (unsigned long)(last.at - first.at), first.pct,
+                last.pct);
+}
 
 void begin() {
   Wire1.begin(cfg::kPinGaugeSda, cfg::kPinGaugeScl, 100000);
