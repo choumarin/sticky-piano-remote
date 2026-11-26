@@ -10,5 +10,6 @@
   "build": {
     "srcDir": "src",
     "includeDir": "include"
-  }
+  },
+  "license": "MIT"
 }
