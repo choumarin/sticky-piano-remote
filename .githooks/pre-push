@@ -1,0 +1,9 @@
+#!/bin/sh
+# Blocks agent-driven pushes: this repo is pushed by the human, manually.
+# Override once by exporting GIT_ALLOW_PUSH=1 for that command.
+if [ "$GIT_ALLOW_PUSH" = "1" ]; then
+  exit 0
+fi
+echo "push blocked by repo policy: never push from agent sessions (see AGENTS.md)." >&2
+echo "Humans: run with GIT_ALLOW_PUSH=1 git push" >&2
+exit 1
