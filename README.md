@@ -113,11 +113,6 @@ diagnostics; the practice timer only records while the clock is valid):
 | `dumpclock` / `dumpble` / `dumpstate` | Clock, BLE link and practice internals |
 | `wipepractice` | Reset all practice counters |
 
-Per-setup options go in `src/config_local.h` (git-ignored): copy
-`src/config_local.h.example`. You can set your WIDI's address there. Without it,
-the Sticky connects to the first BLE-MIDI device it finds and remembers it.
-Pins and the voice table are in `src/config.h`.
-
 ## Project layout
 
 ```
