@@ -38,6 +38,8 @@ void requestConnect(int deviceIndex);  // also becomes the saved target
 void requestDisconnect();              // stays disconnected until a device is picked
 
 bool takeChanged();  // true once after any state change (for UI redraws)
+uint32_t lastPlayTick();  // millis() at the last piano key press (0 = none)
+uint32_t noteOns();      // lifetime Note-On counter (diagnostics)
 void shutdown();     // disconnect cleanly before deep sleep (not persisted)
 
 }  // namespace ble

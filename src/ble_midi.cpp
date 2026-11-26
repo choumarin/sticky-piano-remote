@@ -61,6 +61,8 @@ volatile int syncedVoice = -1;
 volatile int syncedLayer = -1;
 volatile uint32_t voicePcAtMs = 0;
 volatile bool layerPending = false;
+volatile uint32_t lastPlayTickMs = 0;  // last piano Note-On (vel >= 1, ch1)
+volatile uint32_t noteOnCount = 0;     // lifetime Note-On counter (diagnostics)
 uint8_t rxMsb = cfg::kBankMsb, rxLsb = 0;
 
 int findVoice(uint8_t msb, uint8_t lsb, uint8_t pc) {
@@ -73,6 +75,10 @@ int findVoice(uint8_t msb, uint8_t lsb, uint8_t pc) {
 void onMidiMessage(uint8_t status, uint8_t d1, uint8_t d2) {
   power::noteActivity();  // keys, pedals, panel changes: someone is at the piano
   const uint8_t type = status & 0xF0, ch = status & 0x0F;
+  if (type == 0x90 && d2 > 0) {
+    lastPlayTickMs = millis();  // a key went down (any channel)
+    noteOnCount++;
+  }
   if (ch == cfg::kLayerChannel && type == 0xC0) {
     if (millis() - voicePcAtMs < 300) syncedLayer = d1;
     return;
@@ -356,6 +362,10 @@ bool takeChanged() {
   changed = false;
   return true;
 }
+
+uint32_t lastPlayTick() { return lastPlayTickMs; }
+
+uint32_t noteOns() { return noteOnCount; }
 
 void shutdown() {
   btOn = false;  // not persisted: the task disconnects
