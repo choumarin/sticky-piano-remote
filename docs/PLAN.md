@@ -126,14 +126,13 @@ footer (same)
 - The status footer is present on settings too (review note: user asked for
   the status line in the settings menu).
 
-### Home layout (as reviewed in mock v3)
+### Home layout (current implementation: see `docs/mockups/` renders)
 
 ```
 [P1] [P2] [P3] [P4] [P5] [P6]   <- persona tiles, 124x128, icon + persona name
-        Dragon                   <- selected persona name, size 4, bold-ish
-         23m                     <- THIS SESSION, big bold numerals
-       session
-this week   1h 23m    all time  12h 45m   <- stats row
+         23                     <- THIS SESSION, big numerals
+  session minutes
+this week   O minutes    all time   O minutes   <- stats row, minutes only
 [notice row]
 [status footer]
 ```
@@ -142,11 +141,10 @@ this week   1h 23m    all time  12h 45m   <- stats row
   changes while playing (≈ once/min during practice), never when idle. The
   flash-per-minute trade-off is explicit; 5-minute granularity is a constant
   flip away.
-- **Bold:** big numbers double-draw (1 px offset) — faux bold with the
-  classic bitmap font.
-- **Dotted zero:** the classic font's '0' has a center dot (reviewer
-  disliked it) — stat values render every '0' as the letter 'O' (clean oval,
-  visually identical to a plain zero).
+- **Bold/no-dot:** all text is single-draw (faux-bold double-draw was tried and
+  removed — it smeared tile labels). The classic font's '0' has a center dot
+  (reviewer disliked it) — stat values render every '0' as the letter 'O'
+  (clean oval, visually identical to a plain zero).
 - Persona tiles: tap = select (session timer restarts for that persona).
 
 ## 4. Last-session record (the mis-attribute fix)
@@ -318,9 +316,9 @@ worthwhile; ~1%/day at full scan — optional convenience only.
    UI; serial printouts verify counting before any screen work).
 3. Persona assets (six 1-bpp icons) + persona selection state.
 4. New home screen + prototype tile art; settings screen split; navigation.
-5. Multi-bucket redirect at switch, notices, checks from §11.
+5. Multi-bucket redirect at switch, notices, checks from §12.
 
-## 13. Open decisions taken by default (flag for reviewer)
+## 14. Open decisions taken by default (flag for reviewer)
 
 | decision | default | alternative |
 |---|---|---|
@@ -328,5 +326,5 @@ worthwhile; ~1%/day at full scan — optional convenience only.
 | session display cadence | refresh at minute changes while playing | 5-minute granularity for fewer flashes |
 | nobody selected | time not counted | Guest persona that always counts |
 | pause grace | 15 s | shorter = stricter, longer = friendlier |
-| faux bold / zero fix | double-draw digits; '0' rendered as 'O' | custom digit font later |
+| faux bold / zero fix | single-draw text everywhere; '0' rendered as 'O' | custom digit font later |
 | session spanning midnight | all minutes to the start day | split at midnight |

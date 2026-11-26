@@ -37,7 +37,8 @@ for f in FILES:
         if px == 0:  # ink
             b[i // 8] |= 0x80 >> (i % 8)
     rows.append(b)
-    im.save(f"docs/mockups/icon_{f.split('.')[0]}_80.png")  # preview of what device will draw
+    name = f.split('.')[0]
+    im.save(f"/tmp/opencode/icon_{name}_80.png")  # scratch preview, not for git
     print(f"{f}: ink bbox {bbox}")
 
 with open(OUT_H, "w") as h:
